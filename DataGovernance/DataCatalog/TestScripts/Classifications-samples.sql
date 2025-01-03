@@ -56,3 +56,27 @@ and name not like 'app[_]fd[_]led%' ---> Invest App
 order by name;
 
 select * from sys.sensitivity_classifications
+
+
+
+
+USE joget_dx8_pom; 
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_deal_type].c_deal_desc WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Name', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_holdings].c_holding WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Name', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_tracker].c_io_title WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_tracker].c_io_description WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_tracker].c_remarks WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_tracker].c_investment_thesis WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_deal_type].c_deal_desc WITH (LABEL = 'General', INFORMATION_TYPE = 'Operational Data', RANK = LOW);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_doc_type].c_doc_desc WITH (LABEL = 'General', INFORMATION_TYPE = 'Operational Data', RANK = LOW);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_sector].c_sector_desc WITH (LABEL = 'General', INFORMATION_TYPE = 'Business Information', RANK = LOW);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_io_sector].c_sector_desc WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = HIGH);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_project].c_project_name WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Name', RANK = HIGH);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_project].c_description WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = HIGH);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_project].c_category WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Name', RANK = HIGH);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_project].c_remarks WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_project].c_status WITH (LABEL = 'General', INFORMATION_TYPE = 'Operational Data', RANK = LOW);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_property].c_name WITH (LABEL = 'General', INFORMATION_TYPE = 'Operational Data', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO [dbo].[app_fd_tmt_task_type].c_task_description WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO dbo.app_fd_tmt_update.c_task WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);
+ADD SENSITIVITY CLASSIFICATION TO dbo.app_fd_tmt_update.c_notes WITH (LABEL = 'Confidential', INFORMATION_TYPE = 'Business Information', RANK = MEDIUM);

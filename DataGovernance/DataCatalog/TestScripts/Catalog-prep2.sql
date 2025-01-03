@@ -289,3 +289,29 @@ join sys.availability_databases_cluster dc
 on dr.group_database_id=dc.group_database_id   
 where is_local=1  
 go
+
+
+
+-----------------------------------------------------------------
+-- Corrections in Central Repo
+-----------------------------------------------------------------
+use DBA
+go 
+
+-- select * from data_catalog;
+
+select distinct classify_label, classify_info_type from data_catalog;
+
+
+
+select 'USE ' + QUOTENAME(databasename) + '; ADD SENSITIVITY CLASSIFICATION TO '+ QUOTENAME(table_schema) + '.' + QUOTENAME(table_name) + '.' + QUOTENAME(column_name) + 
+		' WITH (LABEL = ''Confidential'', INFORMATION_TYPE = '''+ classify_info_type +''', RANK = MEDIUM );'
+		,* 
+from data_catalog where classify_label = 'Confidential - Pseudonymize';
+
+
+select 'USE ' + QUOTENAME(databasename) + '; ADD SENSITIVITY CLASSIFICATION TO '+ QUOTENAME(table_schema) + '.' + QUOTENAME(table_name) + '.' + QUOTENAME(column_name) + 
+		' WITH (LABEL = ''Confidential'', INFORMATION_TYPE = '''+ 'Name' +''', RANK = MEDIUM );'
+		,* 
+from data_catalog 
+where classify_label = 'Confidential - Pseudonymize';

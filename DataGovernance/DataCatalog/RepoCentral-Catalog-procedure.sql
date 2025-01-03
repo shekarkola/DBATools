@@ -79,6 +79,8 @@ BEGIN
 			[classify_rank] [varchar](8) NULL,
 			created_on datetime2(2) DEFAULT GETDATE(),
 			modified_on datetime2(2) DEFAULT GETDATE(),
+			[friendly_name] NVARCHAR(4000) NULL,
+			[description] NVARCHAR(4000) NULL,
 			is_deleted bit
 		) ;
 		END 
@@ -105,6 +107,8 @@ BEGIN
 			[classify_rank] [varchar](8) NULL,
 			created_on datetime2(2) DEFAULT GETDATE(),
 			modified_on datetime2(2) DEFAULT GETDATE(),
+			[friendly_name] NVARCHAR(4000) NULL,
+			[description] NVARCHAR(4000) NULL,
 			is_deleted bit
 		) ;
 		CREATE CLUSTERED COLUMNSTORE INDEX cci_data_catalog on [data_catalog];
@@ -220,7 +224,7 @@ BEGIN
 				END --- Target servers Loop End! 
 
 				--- Inserting New Records ==========================================================================================
-					insert into data_catalog ([instancename], [databasename], [objectid], [table_schema], [table_name], [column_name], [ordinal_position], [data_type], [is_nullable], [column_default], [length], [precision], [collation_name], [classify_info_type], [classify_label], [classify_rank], is_deleted)
+					insert into data_catalog ([instancename], [databasename], [objectid], [table_schema], [table_name], [column_name], [ordinal_position], [data_type], [is_nullable], [column_default], [length], [precision], [collation_name], [classify_info_type], [classify_label], [classify_rank], friendly_name, [description],is_deleted)
 					select	  [instancename]
 							, [databasename]
 							, [objectid]
@@ -237,6 +241,8 @@ BEGIN
 							, [classify_info_type]
 							, [classify_label]
 							, [classify_rank]
+							, friendly_name
+							, [description]
 							, is_deleted
 					from #data_catalog as t 
 					WHERE NOT EXISTS (SELECT 1 as a FROM data_catalog as t2 
@@ -268,6 +274,8 @@ BEGIN
 										, [classify_info_type] 
 										, [classify_label]
 										, [classify_rank]
+										, friendly_name
+										, [description]
 								from #data_catalog as t 
 							)
 
@@ -281,6 +289,8 @@ BEGIN
 								,[classify_info_type] = t1.[classify_info_type]
 								,[classify_label] = t1.[classify_label]
 								,[classify_rank] = t1.[classify_rank]
+								, friendly_name = t1.friendly_name
+								, [description] = t1.[description]
 								,modified_on = GETDATE()
 							from dtl as t1
 							join data_catalog as t2 on t1.[instancename] = t2.instancename and t1.[databasename] = t2.databasename and t1.[objectid] = t2.objectid and t1.[column_name] = t2.column_name;
@@ -314,6 +324,8 @@ BEGIN
 								 [classify_info_type] = t1.[classify_info_type]
 								,[classify_label] = t1.[classify_label]
 								,[classify_rank] = t1.[classify_rank]
+								, friendly_name = t1.friendly_name
+								, [description] = t1.[description]
 								,modified_on = GETDATE()
 							from dtl as t1
 							join dbo.data_catalog as t2 on 
@@ -346,8 +358,10 @@ END
 GO 
 
 
-[dbo].[collect_catalogdetails] 
 
+
+
+[dbo].[collect_catalogdetails] 
 
 exec [dbo].[collect_catalogdetails] @UpdateType = 2; ---> One Linked servers, updates all details
 
@@ -356,8 +370,15 @@ select * from error_log_dc order by log_datetime desc;
 select * from data_catalog where databasename = 'AXDB';
 
 
+use DBA
+go 
 
----Debug--------------------------------------------
+ALTER TABLE data_catalog ADD [friendly_name] NVARCHAR(4000) NULL;
+ALTER TABLE data_catalog ADD [description] NVARCHAR(4000) NULL;
+
+-------------------------------------------------------------------------------------------
+---Debug
+-------------------------------------------------------------------------------------------
 
 DECLARE @OPENQUERY nvarchar(4000), 
 		@TSQL_LinkServer nvarchar(4000), 
