@@ -1,7 +1,6 @@
 USE [DBAClient]
 GO
 
-
 -- Create the stored procedure
 CREATE OR ALTER PROCEDURE [dbo].[collect_server_properties]
 AS
@@ -15,6 +14,22 @@ BEGIN
     DECLARE @instanceFullName NVARCHAR(128);
     DECLARE @timestamp DATETIME;
 
+	IF (SELECT OBJECT_ID('server_properties')) IS NULL 
+		BEGIN 
+		CREATE TABLE [dbo].[server_properties](
+			[InstanceFullName] [nvarchar](200) NULL,
+			[DefaultDataLocation] [nvarchar](4000) NULL,
+			[DefaultLogLocation] [nvarchar](4000) NULL,
+			[DefaultBackupLocation] [nvarchar](4000) NULL,
+			[MaxDOP] [int] NULL,
+			[CostThreshold] [int] NULL,
+			[SQLServerVersion] [nvarchar](100) NULL,
+			[ProductLevel] [nvarchar](100) NULL,
+			[Edition] [nvarchar](100) NULL,
+			[MaxMemoryMB] [bigint] NULL,
+			[Timestamp] [datetime2](7) NULL
+		);
+		END 
     -- Get current timestamp
     SET @timestamp = GETDATE();
 
@@ -58,7 +73,7 @@ BEGIN
     SELECT @instanceFullName = CAST(SERVERPROPERTY('MachineName') AS NVARCHAR(128)) + '\' + ISNULL(CAST(SERVERPROPERTY('InstanceName') AS NVARCHAR(128)), 'MSSQLSERVER');
 
     -- Insert results into local table
-    INSERT INTO dbo.Perfmon_Server_Properties (
+    INSERT INTO dbo.server_properties (
         InstanceFullName,
         DefaultDataLocation,
         DefaultLogLocation,
@@ -85,7 +100,5 @@ BEGIN
         @timestamp
     );
 	-- Delete records older than 30 days
-    DELETE FROM dbo.Perfmon_Server_Properties WHERE Timestamp <= DATEADD(DAY, -30, GETDATE());
+    DELETE FROM dbo.server_properties WHERE Timestamp <= DATEADD(DAY, -30, GETDATE());
 END;
-GO
-

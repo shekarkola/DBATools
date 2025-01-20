@@ -1,6 +1,10 @@
 USE [DBAClient]
 GO
-
+/****** Object:  StoredProcedure [dbo].[DBCC_CHECK]    Script Date: 1/20/2025 1:34:11 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 -- =============================================
 -- Author:			SHEKAR KOLA
@@ -8,23 +12,51 @@ GO
 -- Modified date:	2019-10-03
 -- Description:	
 -- =============================================
-CREATE OR ALTER PROCEDURE [dbo].[DBCC_CHECK]
+ALTER PROCEDURE [dbo].[DBCC_CHECK]
 	-- Add the parameters for the stored procedure here
 	@DBName sysname = null,
 	@ExcludeDBs sysname = null
 AS
 BEGIN
-	-- SET NOCOUNT ON added to prevent extra result sets from
-	-- interfering with SELECT statements.
 	SET NOCOUNT ON;
 
-    -- Insert statements for procedure here
-	
 		Declare @DBCCommand nvarchar (500);
 		Declare @Databases Table (DBName sysname);
 
 		Declare @is_DB_HADREnabled bit;
 		Declare @isPrimaryReplica bit;
+
+IF (SELECT OBJECT_ID ('dbcc_history')) IS NULL 
+	BEGIN 
+		CREATE TABLE [dbo].[DBCC_HISTORY](
+			[InstanceFullName] [nvarchar](256) NULL,
+			[Error] [int] NULL,
+			[Level] [int] NULL,
+			[State] [int] NULL,
+			[MessageText] [varchar](7000) NULL,
+			[RepairLevel] [int] NULL,
+			[Status] [int] NULL,
+			[DbId] [int] NULL,
+			[DbFragId] [int] NULL,
+			[ObjectId] [int] NULL,
+			[IndexId] [int] NULL,
+			[PartitionID] [int] NULL,
+			[AllocUnitID] [int] NULL,
+			[RidDbId] [int] NULL,
+			[RidPruId] [int] NULL,
+			[File] [int] NULL,
+			[Page] [int] NULL,
+			[Slot] [int] NULL,
+			[RefDbId] [int] NULL,
+			[RefPruId] [int] NULL,
+			[RefFile] [int] NULL,
+			[RefPage] [int] NULL,
+			[RefSlot] [int] NULL,
+			[Allocation] [int] NULL,
+			[LogDatetime] [datetime] NULL
+		);
+		ALTER TABLE [dbo].[DBCC_HISTORY] ADD  DEFAULT (getdate()) FOR [LogDatetime];
+	END
 
 	IF (@DBName is null)
 	BEGIN
@@ -70,7 +102,7 @@ BEGIN
 				BEGIN TRY 
 					Print FORMAT (GETDATE(), 'yyyy-MM-dd HH:MM:ss') + ' DBCC execution Started for '+ @DBName + '; '; 
 					Print FORMAT (GETDATE(), 'yyyy-MM-dd HH:MM:ss') + ' Executing... '+ @DBCCommand ; 
-					Insert into DBCC_HISTORY 
+					Insert into dbcc_history 
 								(	[Error] ,
 									[Level] ,
 									[State] ,
@@ -105,7 +137,7 @@ BEGIN
 								,ERROR_MESSAGE() AS ErrorMessage;
 						DELETE FROM @Databases where dbname = @DBName
 				END CATCH
-				Update DBCC_HISTORY set InstanceFullName = @@SERVERNAME where DbId = DB_ID (@DBName);
+				Update dbcc_history set InstanceFullName = @@SERVERNAME where DbId = DB_ID (@DBName);
 				Print FORMAT (GETDATE(), 'yyyy-MM-dd HH:MM:ss') + ' DBCC execution Completed for ' + @DBName + '; '; 
 				DELETE FROM @Databases where dbname = @DBName;
 			END
@@ -116,5 +148,3 @@ BEGIN
 	END
 
 END
-GO
-

@@ -1,6 +1,6 @@
 USE [DBAClient]
 GO
-/****** Object:  StoredProcedure [dbo].[DoBackup]    Script Date: 12/4/2024 10:44:38 AM ******/
+/****** Object:  StoredProcedure [dbo].[DoBackup]    Script Date: 1/14/2025 12:01:23 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -9,11 +9,11 @@ GO
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Author:			Shekar Kola
--- Create date:		2024-12-04
+-- Create date:		2025-01-14
 -- Description:		Backup script
 
-Version: 20241204
-	- QUOTENAME added for DatabaseName parameter. 
+Version: 20220715
+	- Omit the databses when they are in DAG and is not readable secondary.
 Version: 20220715
 	-	Encryption option enabled 
 		
@@ -138,7 +138,14 @@ BEGIN
 
 	IF @DatabaseName is null 
 		begin
-			insert into #BackupTargetDB select name from sys.databases where database_id > 4 and state = 0;
+			insert into #BackupTargetDB 
+			select name from sys.databases as d where database_id > 4 and state = 0
+			and not exists (select 1
+				from sys.dm_hadr_database_replica_states as t1
+				join sys.availability_replicas as r on t1.replica_id = r.replica_id
+				where is_local = 1 and r.secondary_role_allow_connections = 0
+				and t1.group_database_id = d.group_database_id
+				);
 		end
 
 	IF @DatabaseName is not null  
@@ -217,12 +224,7 @@ BEGIN
 								set @BackupTypeName = 'Log_';
 								set @BackupFilePath = (@BackupPath + @DatabaseName + '_' + @BackupDateTime + '_' +@ServerName + '_'+ @InstanceName+ '_' + @BackupTypeName + @VersionNumber + '.TRN');
 
-								--BACKUP LOG @DatabaseName TO DISK = @BackupFilePath WITH COMPRESSION, CHECKSUM;
-
-								select @BackupCmd = 'BACKUP LOG '  + QUOTENAME(@DatabaseName) + ' TO DISK = ''' + @BackupFilePath + ''' WITH COMPRESSION, CHECKSUM';
-								PRINT CONVERT(VARCHAR(20),GETDATE(),120)+ ': Executing: ' + @BackupCmd;
-								Exec (@BackupCmd);
-
+								BACKUP LOG @DatabaseName TO DISK = @BackupFilePath WITH COMPRESSION, CHECKSUM;
 								Print CONVERT(VARCHAR(20),GETDATE(),120) +  ' Backup Created as '+ @BackupFilePath + '; '
 							END
 							ELSE Print CONVERT(VARCHAR(20),GETDATE(),120) + ' Its not preffered replica for the backup; '
@@ -255,18 +257,16 @@ BEGIN
 
 								BEGIN 
 									SET @CertName = (select name from master.sys.certificates where subject like '%Backup%');
-									select @BackupCmd = 'BACKUP DATABASE ' + QUOTENAME(@DatabaseName) + ' TO DISK = ''' + @BackupFilePath + ''' WITH COMPRESSION, CHECKSUM, ENCRYPTION (ALGORITHM=AES_256, SERVER CERTIFICATE = ' + @CertName + ')';
-									PRINT CONVERT(VARCHAR(20),GETDATE(),120) + ': Executing: ' + @BackupCmd;
+									select @BackupCmd = 'BACKUP DATABASE ' + @DatabaseName + ' TO DISK = ''' + @BackupFilePath + ''' WITH COMPRESSION, CHECKSUM, ENCRYPTION (ALGORITHM=AES_256, SERVER CERTIFICATE = ' + @CertName + ')';
+									PRINT 'Executing: ' + @BackupCmd;
 									Exec (@BackupCmd);
-									-- BACKUP DATABASE QUOTENAME(@DatabaseName) TO DISK = @BackupFilePath WITH COMPRESSION, CHECKSUM, ENCRYPTION (ALGORITHM=AES_256, SERVER CERTIFICATE = @CertName);
+									-- BACKUP DATABASE @DatabaseName TO DISK = @BackupFilePath WITH COMPRESSION, CHECKSUM, ENCRYPTION (ALGORITHM=AES_256, SERVER CERTIFICATE = @CertName);
 								END 
 							ELSE --- Backup without Encryption 
 								BEGIN
-									select @BackupCmd = 'BACKUP DATABASE '  + QUOTENAME(@DatabaseName) + ' TO DISK = ''' + @BackupFilePath + ''' WITH COMPRESSION, CHECKSUM';
-									PRINT CONVERT(VARCHAR(20),GETDATE(),120)+ ': Executing: ' + @BackupCmd;
-									Exec (@BackupCmd);
+									BACKUP DATABASE @DatabaseName TO DISK = @BackupFilePath WITH COMPRESSION, CHECKSUM;
 								END
-							Print CONVERT(VARCHAR(20),GETDATE(),120) + ': Backup Created as '+ @BackupFilePath + '; '
+							Print CONVERT(VARCHAR(20),GETDATE(),120) + ' Backup Created as '+ @BackupFilePath + '; '
 							END
 							ELSE Print CONVERT(VARCHAR(20),GETDATE(),120) + ' Backup NOT Possible here! as this is not primary replica, Full Backup recommened to perform on primary to keep further DIFF Backups valid; '
 						END
@@ -294,23 +294,21 @@ BEGIN
 										END
 
 						-- Actual Backup command Begins---------------------------------------------------------------------------------------------------------------
-							set @BackupTypeName = 'Full_Copy_';
-							set @BackupFilePath = (@BackupPath + @DatabaseName + '_' + @BackupDateTime + '_' +@ServerName + '_'+ @InstanceName+ '_' + @BackupTypeName + @VersionNumber + '.BAK');
+								set @BackupTypeName = 'Full_Copy_';
+								set @BackupFilePath = (@BackupPath + @DatabaseName + '_' + @BackupDateTime + '_' +@ServerName + '_'+ @InstanceName+ '_' + @BackupTypeName + @VersionNumber + '.BAK');
 
 							--- Backup with Encryption 
 							IF @Encrypt = 1 and exists (select 1 from master.sys.certificates where subject like '%Backup%')
 								BEGIN 
 									SET @CertName = (select name from master.sys.certificates where subject like '%Backup%');
-									select @BackupCmd = 'BACKUP DATABASE ' + @DatabaseName + ' TO DISK = ''' + @BackupFilePath + ''' WITH COPY_ONLY, COMPRESSION, CHECKSUM, ENCRYPTION (ALGORITHM=AES_256, SERVER CERTIFICATE = ' + @CertName + ')';
-									PRINT CONVERT(VARCHAR(20),GETDATE(),120) + ' Executing: ' + @BackupCmd;
+									select @BackupCmd = 'BACKUP DATABASE ' + @DatabaseName + ' TO DISK = ''' + @BackupFilePath + ''' WITH COMPRESSION, CHECKSUM, ENCRYPTION (ALGORITHM=AES_256, SERVER CERTIFICATE = ' + @CertName + ')';
+									PRINT 'Executing: ' + @BackupCmd;
 									EXEC (@BackupCmd)
 									-- BACKUP DATABASE @DatabaseName TO DISK = @BackupFilePath WITH COMPRESSION, CHECKSUM, COPY_ONLY, ENCRYPTION (ALGORITHM=AES_256, SERVER CERTIFICATE = @CertName);
 								END 
 							ELSE --- Backup without Encryption 
 								BEGIN
-									select @BackupCmd = 'BACKUP DATABASE '  + QUOTENAME(@DatabaseName) + ' TO DISK = ''' + @BackupFilePath + ''' WITH COPY_ONLY, COMPRESSION, CHECKSUM';
-									PRINT 'Executing: ' + @BackupCmd;
-									Exec (@BackupCmd);
+									BACKUP DATABASE @DatabaseName TO DISK = @BackupFilePath WITH COMPRESSION, CHECKSUM;
 								END
 							Print CONVERT(VARCHAR(20),GETDATE(),120) + ' Backup Created as '+ @BackupFilePath + '; '
 							
@@ -346,10 +344,7 @@ BEGIN
 								set @BackupTypeName = 'Dif_';
 								set @BackupFilePath = (@BackupPath + @DatabaseName + '_' + @BackupDateTime + '_' +@ServerName + '_'+ @InstanceName+ '_' + @BackupTypeName + @VersionNumber + '.BAK');
 
-								select @BackupCmd = 'BACKUP DATABASE '  + QUOTENAME(@DatabaseName) + ' TO DISK = ''' + @BackupFilePath + ''' WITH DIFFERENTIAL, COMPRESSION, CHECKSUM';
-								PRINT 'Executing: ' + @BackupCmd;
-								Exec (@BackupCmd);
-
+								BACKUP DATABASE @DatabaseName TO DISK = @BackupFilePath WITH DIFFERENTIAL, COMPRESSION, CHECKSUM;
 								Print CONVERT(VARCHAR(20),GETDATE(),120) + ' Backup Created as '+ @BackupFilePath +'; ' 
 							END
 							ELSE Print CONVERT(VARCHAR(20),GETDATE(),120) +  ' Its not preferred replica for the backup; '

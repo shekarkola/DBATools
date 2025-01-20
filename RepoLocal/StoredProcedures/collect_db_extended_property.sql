@@ -1,12 +1,13 @@
 USE [DBAClient]
 GO
-/****** Object:  StoredProcedure [dbo].[process_db_extended_property]    Script Date: 11/26/2024 2:14:39 PM ******/
+/****** Object:  StoredProcedure [dbo].[process_db_extended_property]    Script Date: 1/14/2025 12:03:32 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[process_db_extended_property]
+
+CREATE OR ALTER PROCEDURE [dbo].[collect_db_extended_property]
 
 	--@PropertyName nvarchar(128)
 AS
@@ -70,7 +71,16 @@ if (select object_id('tempdb..#XProperties')) is null
 	end
 
 insert into #TargetDBs
-select name from sys.databases where state = 0 and database_id > 4;
+select name 
+from sys.databases as d 
+where state = 0 and database_id > 4
+and not exists (select 1
+				from sys.dm_hadr_database_replica_states as t1
+				join sys.availability_replicas as r on t1.replica_id = r.replica_id
+				where is_local = 1 and r.secondary_role_allow_connections = 0
+				and t1.group_database_id = d.group_database_id
+				)
+;
 
 Declare @dbname nvarchar(500);
 Declare @cmd1 nvarchar(4000);
@@ -177,4 +187,3 @@ END
 -- select * from database_properties;
 
 END
-go
